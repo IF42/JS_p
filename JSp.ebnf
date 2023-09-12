@@ -1,0 +1,21 @@
+program ::= <statement>*
+statement ::= <import> | <enum> | <variable>
+
+import ::= "import" <path> ["as" <alias>]
+
+enum ::= "enum" "{" <enum_list> "}"
+enum_list ::= enum_element ("," enum_element)*
+enum_element ::= identifier ["=" constant_expression]
+
+variable ::= ["const"] identifier "=" <expression>
+expression ::= <constant> | <lambda> | <identifier> | <list> | <tuple> | <named_tuple> | <dictionary>
+
+lambda ::= "(" [parameter_list] ")" "=>" expression
+
+parameter_list ::= identifier ("," identifier)*
+
+list ::= "[" expression* "]"
+tuple ::= "(" expression* ")"
+named_tuple ::= "{" (identifier ":" expression)* "}"
+dictionary ::= "{" (expression ":" expression)* "}"
+
