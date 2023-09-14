@@ -34,6 +34,9 @@ typedef struct
 {
     TokenType type;
 
+    uint32_t row;
+    uint32_t column;
+
     char * content;
     uint32_t start;
     uint32_t end;

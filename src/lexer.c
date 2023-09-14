@@ -5,22 +5,22 @@
 #include <stdio.h>
 
 
-#define __lexer_ref(T) \
+#define lexer_ref(T) \
     &((T)->code[(T)->state.index])
 
 
-#define __lexer_char(T) \
+#define lexer_char(T) \
     ((int) (T)->code[(T)->state.index])
 
 
-#define __lexer_eof(T) \
-    ((T)->state.index >= (T)->length || __lexer_char(T) == 0)
+#define lexer_eof(T) \
+    ((T)->state.index >= (T)->length || lexer_char(T) == 0)
 
 
 static int
-__lexer_peek(Lexer * self)
+lexer_peek(Lexer * self)
 {
-    if(__lexer_char(self) == '\0')
+    if(lexer_char(self) == '\0')
         return '\0';
     else
         return self->code[self->state.index + 1];
@@ -28,11 +28,11 @@ __lexer_peek(Lexer * self)
 
 
 static inline void 
-__lexer_advance(Lexer * self)
+lexer_advance(Lexer * self)
 {
-    if(__lexer_char(self) == '\0')
+    if(lexer_char(self) == '\0')
         return;
-    else if(__lexer_char(self) == '\n')
+    else if(lexer_char(self) == '\n')
     {
         self->state.row ++;
         self->state.column = 1;
@@ -45,33 +45,36 @@ __lexer_advance(Lexer * self)
     
 
 static inline void
-__lexer_skip_whitespace(Lexer * self)
+lexer_skip_whitespace(Lexer * self)
 {
-    while(isspace(__lexer_char(self)))
-        __lexer_advance(self);
+    while(isspace(lexer_char(self)))
+        lexer_advance(self);
 }
 
 
 static inline void
-__lexer_skip_line_comment(Lexer * self)
+lexer_skip_line_comment(Lexer * self)
 {
-    while(__lexer_eof(self) == false && __lexer_char(self) != '\n')
-        __lexer_advance(self);
+    while(lexer_eof(self) == false 
+        && lexer_char(self) != '\n')
+    {
+        lexer_advance(self);
+    }
 }
 
 
 static inline void
-__lexer_skip_block_comment(Lexer * self)
+lexer_skip_block_comment(Lexer * self)
 {
-    while(__lexer_eof(self) == false 
-		&& __lexer_char(self) != '*' 
-		&& __lexer_peek(self) != '/')
+    while(lexer_eof(self) == false 
+		&& lexer_char(self) != '*' 
+		&& lexer_peek(self) != '/')
 	{
-        __lexer_advance(self);
+        lexer_advance(self);
 	}
 
-    __lexer_advance(self);
-    __lexer_advance(self);
+    lexer_advance(self);
+    lexer_advance(self);
 }
 
 
@@ -79,62 +82,75 @@ __lexer_skip_block_comment(Lexer * self)
 ** TODO: treat excape sequences
 */
 static inline Token
-__lexer_read_string(Lexer * self)
+lexer_read_string(Lexer * self)
 {
-    __lexer_advance(self);
+    lexer_advance(self);
 
     Token token = 
-        Token(TokenType_String, __lexer_ref(self), self->state.index, 0);
+        Token(
+            TokenType_String
+            , self->state.row
+            , self->state.column
+            , lexer_ref(self)
+            , self->state.index, 0);
 
-    while(__lexer_eof(self) == false && __lexer_char(self) != '"')
+    while(lexer_eof(self) == false 
+        && lexer_char(self) != '"')
     {
-        if(__lexer_char(self) == '\\')
-            __lexer_advance(self);
+        if(lexer_char(self) == '\\')
+            lexer_advance(self);
 
-        __lexer_advance(self);
+        lexer_advance(self);
     }
 
     token.end = self->state.index;
-    __lexer_advance(self);
+    lexer_advance(self);
 
     return token;
 }
 
 
 static inline Token
-__lexer_read_number(Lexer * self)
+lexer_read_number(Lexer * self)
 {
     Token token = 
-        Token(TokenType_Int, __lexer_ref(self), self->state.index, 0);
+        Token(
+            TokenType_Int
+            , self->state.row
+            , self->state.column
+            , lexer_ref(self)
+            , self->state.index, 0);
 
-    while(isdigit(__lexer_char(self)) 
-        || __lexer_char(self) == '.' 
-        || tolower(__lexer_char(self)) == 'e')
+    while(isdigit(lexer_char(self)) 
+        || lexer_char(self) == '.' 
+        || tolower(lexer_char(self)) == 'e')
     {
-        if(__lexer_char(self) == '.' )
+        if(lexer_char(self) == '.' )
         {
             if(token.type == TokenType_Frac)
             {
                 token.type = TokenType_Undefined;
                 token.end  = self->state.index;
+
                 return token;
             }
             else
                 token.type = TokenType_Int;
         }
-        if(tolower(__lexer_char(self)) == 'e')
+        if(tolower(lexer_char(self)) == 'e')
         {
             if(token.type == TokenType_Frac)
             {
                 token.type = TokenType_Undefined;
                 token.end  = self->state.index;
+
                 return token;
             }
             else
                 token.type = TokenType_Frac;
         }
 
-        __lexer_advance(self);
+        lexer_advance(self);
     }   
 
     token.end  = self->state.index;
@@ -144,7 +160,7 @@ __lexer_read_number(Lexer * self)
 
 
 static inline bool
-__elem__(
+elem(
     char * array
     , char c)
 {
@@ -162,16 +178,21 @@ static char symbol[] = "+-=<>{}[]().:\'\",";
 
 
 static inline Token
-__lexer_read_keyword(Lexer * self)
+lexer_read_keyword(Lexer * self)
 {
     Token token = 
-        Token(TokenType_Keyword, __lexer_ref(self), self->state.index, 0);
+        Token(
+            TokenType_Keyword
+            , self->state.row
+            , self->state.column
+            , lexer_ref(self)
+            , self->state.index, 0);
 
-    while(__lexer_eof(self) == false
-            && isspace(__lexer_char(self)) == false
-            && __elem__(symbol, __lexer_char(self)) == false)
+    while(lexer_eof(self) == false
+            && isspace(lexer_char(self)) == false
+            && elem(symbol, lexer_char(self)) == false)
     {
-        __lexer_advance(self);
+        lexer_advance(self);
     }
 
     token.end = self->state.index;
@@ -181,12 +202,17 @@ __lexer_read_keyword(Lexer * self)
 
 
 static inline Token
-__lexer_read_symbol(Lexer * self)
+lexer_read_symbol(Lexer * self)
 {
     Token token = 
-		Token(TokenType_Symbol, __lexer_ref(self), self->state.index, 0);
+		Token(
+            TokenType_Symbol
+            , self->state.row
+            , self->state.column
+            , lexer_ref(self)
+            , self->state.index, 0);
 
-	__lexer_advance(self);
+	lexer_advance(self);
 
 	token.end = self->state.index;
 
@@ -197,62 +223,64 @@ __lexer_read_symbol(Lexer * self)
 Token
 lexer_next_token(Lexer * self)
 {
-    while(__lexer_char(self) != 0)
+    while(lexer_char(self) != 0)
     {
-		if(isspace(__lexer_char(self)))
+		if(isspace(lexer_char(self)))
         {
-            __lexer_skip_whitespace(self);
+            lexer_skip_whitespace(self);
             continue;
         }
-		else if(__lexer_char(self) == '/' 
-			&& __lexer_peek(self) == '/')
+		else if(lexer_char(self) == '/' 
+			&& lexer_peek(self) == '/')
 		{
-			__lexer_skip_line_comment(self);
+			lexer_skip_line_comment(self);
 			continue;
 		}	
-		else if(__lexer_char(self) == '/' 
-			&& __lexer_peek(self) == '*')
+		else if(lexer_char(self) == '/' 
+			&& lexer_peek(self) == '*')
 		{
-			__lexer_skip_block_comment(self);
+			lexer_skip_block_comment(self);
 			continue;
 		}
-		else if(__lexer_char(self) == '"')
-            return __lexer_read_string(self);
-        else if(isdigit(__lexer_char(self)))
-            return __lexer_read_number(self);
-        else if(__lexer_char(self) == '{')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '}')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '[')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == ']')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '(')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == ')')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '<')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '>')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '=')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '.')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == ',')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == ':')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '+')
-            return __lexer_read_symbol(self);
-        else if(__lexer_char(self) == '-')
-            return __lexer_read_symbol(self);
+		else if(lexer_char(self) == '"')
+            return lexer_read_string(self);
+        else if(isdigit(lexer_char(self)))
+            return lexer_read_number(self);
+        else if(lexer_char(self) == '{')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '}')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '[')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == ']')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '(')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == ')')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '<')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '>')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '=')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '.')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == ',')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == ':')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '+')
+            return lexer_read_symbol(self);
+        else if(lexer_char(self) == '-')
+            return lexer_read_symbol(self);
         else 
-            return __lexer_read_keyword(self);
+            return lexer_read_keyword(self);
     }        
 
     return Token(TokenType_EOF
+            , self->state.row
+            , self->state.column
             , NULL
             , self->state.index
             , self->state.index);

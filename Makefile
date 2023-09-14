@@ -5,17 +5,20 @@ LIBS=
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
+LIBS += -lvector
 else
+LIBS += -l:libvector.so
 endif
 
 
-TARGET=jsp
+TARGET=ecc
 CACHE=.cache
 OUTPUT=$(CACHE)/release
 
 MODULES += main.o
 MODULES += lexer.o
 MODULES += parser.o
+MODULES += debug.o
 
 OBJ=$(addprefix $(CACHE)/,$(MODULES))
 

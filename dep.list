@@ -1,3 +1,5 @@
-.cache/main.o: app/main.c app/../src/lexer.h
+.cache/main.o: app/main.c app/../src/debug.h app/../src/parser.h \
+ app/../src/lexer.h
+.cache/debug.o: src/debug.c src/debug.h
 .cache/lexer.o: src/lexer.c src/lexer.h
-.cache/parser.o: src/parser.c src/parser.h
+.cache/parser.o: src/parser.c src/parser.h src/lexer.h
